@@ -1,0 +1,306 @@
+{
+  "nbformat": 4,
+  "nbformat_minor": 0,
+  "metadata": {
+    "colab": {
+      "provenance": []
+    },
+    "kernelspec": {
+      "name": "python3",
+      "display_name": "Python 3"
+    },
+    "language_info": {
+      "name": "python"
+    }
+  },
+  "cells": [
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "id": "OW0_rIMZjmgl"
+      },
+      "outputs": [],
+      "source": [
+        "import numpy as np\n",
+        "\n",
+        "# Original town data matrix (each row is a person, each column is a feature)\n",
+        "data_matrix = np.array([\n",
+        "    [170, 68, 30, 40000],\n",
+        "    [168, 70, 32, 42000],\n",
+        "    [170, 65, 29, 39000],\n",
+        "    [160, 55, 25, 35000],\n",
+        "    [172, 67, 33, 41000],\n",
+        "    [170, 68, 31, 40000],\n",
+        "    [160, 56, 26, 34000],\n",
+        "    [175, 75, 40, 50000],\n",
+        "    [170, 68, 30, 40000],\n",
+        "    [162, 58, 27, 36000]\n",
+        "])"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "Normalization: Since the income column has a much larger scale than the other columns, we scale it down to avoid it dominating the results."
+      ],
+      "metadata": {
+        "id": "Md2DxsNekW7l"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# Step 1: Normalize the income column (since it has a different scale)\n",
+        "data_matrix[:, -1] = data_matrix[:, -1] / 1000  # scale income to thousands for consistency\n",
+        "print(data_matrix)"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "UNnx7OtSjyYm",
+        "outputId": "91cb5c31-641b-4d80-82bd-136f37946870"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "[[170  68  30  40]\n",
+            " [168  70  32  42]\n",
+            " [170  65  29  39]\n",
+            " [160  55  25  35]\n",
+            " [172  67  33  41]\n",
+            " [170  68  31  40]\n",
+            " [160  56  26  34]\n",
+            " [175  75  40  50]\n",
+            " [170  68  30  40]\n",
+            " [162  58  27  36]]\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "SVD: We apply Singular Value Decomposition to decompose the matrix into three parts: U, S, and VT."
+      ],
+      "metadata": {
+        "id": "7JBiRnFekdn2"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# Step 2: Perform Singular Value Decomposition\n",
+        "U, S, VT = np.linalg.svd(data_matrix, full_matrices=True)"
+      ],
+      "metadata": {
+        "id": "UVukxrUSj4U1"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "Reduced Rank Selection: We choose a rank (e.g., rank 2) for the low-rank approximation. This rank determines the \"amount of information\" we keep in the approximation."
+      ],
+      "metadata": {
+        "id": "lm-bsC4FklkU"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "print(S)"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "HC8nj_E87x_k",
+        "outputId": "e925e6d5-3bf3-44ad-ae7b-1c2d7671b9b5"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "[590.81035003  17.66003324   5.41904229   1.69926461]\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# Step 3: Set the rank for low-rank approximation (e.g., rank 2)\n",
+        "rank = 2\n",
+        "S_reduced = np.diag(S[:rank])\n",
+        "U_reduced = U[:, :rank]\n",
+        "VT_reduced = VT[:rank, :]"
+      ],
+      "metadata": {
+        "id": "NmgKH5S-j9At"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "**U_reduced:** This is the compressed version of U, containing only the first 2 columns. These columns represent the key patterns or directions of variance in the data.\n",
+        "\n",
+        "**S_reduced:** This is a diagonal matrix with only the top 2 singular values. These values represent the strength of each pattern retained in the approximation.\n",
+        "\n",
+        "**VT_reduced:** This is the compressed version of VT, containing only the first 2 rows. This matrix represents the relationship between the features in the data, corresponding to the key patterns."
+      ],
+      "metadata": {
+        "id": "EcCRWaoplobN"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "print(\"Compressed U (Rank 2):\")\n",
+        "print(np.round(U_reduced, 2))\n",
+        "\n",
+        "print(\"\\nCompressed S (Rank 2):\")\n",
+        "print(np.round(S_reduced, 2))\n",
+        "\n",
+        "print(\"\\nCompressed VT (Rank 2):\")\n",
+        "print(np.round(VT_reduced, 2))"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "Z_MAM7DllcTM",
+        "outputId": "afbff69b-7436-4796-a520-dd7d927c6800"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Compressed U (Rank 2):\n",
+            "[[-0.32  0.03]\n",
+            " [-0.32  0.26]\n",
+            " [-0.32 -0.12]\n",
+            " [-0.3  -0.43]\n",
+            " [-0.32  0.06]\n",
+            " [-0.32  0.06]\n",
+            " [-0.3  -0.4 ]\n",
+            " [-0.34  0.69]\n",
+            " [-0.32  0.03]\n",
+            " [-0.3  -0.3 ]]\n",
+            "\n",
+            "Compressed S (Rank 2):\n",
+            "[[590.81   0.  ]\n",
+            " [  0.    17.66]]\n",
+            "\n",
+            "Compressed VT (Rank 2):\n",
+            "[[-0.9  -0.35 -0.16 -0.21]\n",
+            " [-0.43  0.59  0.49  0.47]]\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "Reconstruction: We reconstruct the matrix using only the top 2 singular values and corresponding vectors, resulting in a rank-2 approximation of the original matrix."
+      ],
+      "metadata": {
+        "id": "afjPmhZtk1-U"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# Step 4: Reconstruct the matrix using the reduced rank\n",
+        "low_rank_approximation = np.dot(U_reduced, np.dot(S_reduced, VT_reduced))"
+      ],
+      "metadata": {
+        "id": "myU6bwxUkEKF"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "Rescaling: After obtaining the approximation, we rescale the income column back to the original scale."
+      ],
+      "metadata": {
+        "id": "2uVSkeahk-n7"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# Step 5: Scale back the income column\n",
+        "low_rank_approximation[:, -1] = low_rank_approximation[:, -1] * 1000"
+      ],
+      "metadata": {
+        "id": "yk54n-okkHdi"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# Print the original and the low-rank approximation matrices\n",
+        "print(\"Original Matrix:\")\n",
+        "print(data_matrix)\n",
+        "print(\"\\nLow-Rank Approximation (Rank 2):\")\n",
+        "print(np.round(low_rank_approximation, 2))"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "m6AakDvykOMN",
+        "outputId": "839e6c22-8d8a-4a5a-84e0-8842d74d40f7"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Original Matrix:\n",
+            "[[170  68  30  40]\n",
+            " [168  70  32  42]\n",
+            " [170  65  29  39]\n",
+            " [160  55  25  35]\n",
+            " [172  67  33  41]\n",
+            " [170  68  31  40]\n",
+            " [160  56  26  34]\n",
+            " [175  75  40  50]\n",
+            " [170  68  30  40]\n",
+            " [162  58  27  36]]\n",
+            "\n",
+            "Low-Rank Approximation (Rank 2):\n",
+            "[[1.701700e+02 6.657000e+01 3.119000e+01 4.072840e+04]\n",
+            " [1.681500e+02 6.881000e+01 3.308000e+01 4.252206e+04]\n",
+            " [1.700700e+02 6.444000e+01 2.961000e+01 3.913531e+04]\n",
+            " [1.598900e+02 5.632000e+01 2.466000e+01 3.358510e+04]\n",
+            " [1.718900e+02 6.760000e+01 3.177000e+01 4.141302e+04]\n",
+            " [1.701000e+02 6.691000e+01 3.145000e+01 4.099332e+04]\n",
+            " [1.598900e+02 5.678000e+01 2.501000e+01 3.393727e+04]\n",
+            " [1.747700e+02 7.719000e+01 3.861000e+01 4.846343e+04]\n",
+            " [1.701700e+02 6.657000e+01 3.119000e+01 4.072840e+04]\n",
+            " [1.619000e+02 5.890000e+01 2.637000e+01 3.542022e+04]]\n"
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,272 @@
+{
+  "nbformat": 4,
+  "nbformat_minor": 0,
+  "metadata": {
+    "colab": {
+      "provenance": []
+    },
+    "kernelspec": {
+      "name": "python3",
+      "display_name": "Python 3"
+    },
+    "language_info": {
+      "name": "python"
+    }
+  },
+  "cells": [
+    {
+      "cell_type": "code",
+      "execution_count": 1,
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "XCAw5AQA34JW",
+        "outputId": "58bb64b5-1985-4d0d-d07b-0cc11988a87b"
+      },
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stderr",
+          "text": [
+            "/usr/local/lib/python3.10/dist-packages/torchvision/models/_utils.py:208: UserWarning: The parameter 'pretrained' is deprecated since 0.13 and may be removed in the future, please use 'weights' instead.\n",
+            "  warnings.warn(\n",
+            "/usr/local/lib/python3.10/dist-packages/torchvision/models/_utils.py:223: UserWarning: Arguments other than a weight enum or `None` for 'weights' are deprecated since 0.13 and may be removed in the future. The current behavior is equivalent to passing `weights=MobileNet_V2_QuantizedWeights.IMAGENET1K_QNNPACK_V1`. You can also use `weights=MobileNet_V2_QuantizedWeights.DEFAULT` to get the most up-to-date weights.\n",
+            "  warnings.warn(msg)\n",
+            "/usr/local/lib/python3.10/dist-packages/torch/ao/quantization/utils.py:376: UserWarning: must run observer before calling calculate_qparams. Returning default values.\n",
+            "  warnings.warn(\n",
+            "Downloading: \"https://download.pytorch.org/models/quantized/mobilenet_v2_qnnpack_37f702c5.pth\" to /root/.cache/torch/hub/checkpoints/mobilenet_v2_qnnpack_37f702c5.pth\n",
+            "100%|██████████| 3.42M/3.42M [00:00<00:00, 59.6MB/s]\n",
+            "/usr/local/lib/python3.10/dist-packages/torch/_utils.py:383: UserWarning: TypedStorage is deprecated. It will be removed in the future and UntypedStorage will be the only storage class. This should only matter to you if you are using storages directly.  To access UntypedStorage directly, use tensor.untyped_storage() instead of tensor.storage()\n",
+            "  device=storage.device,\n",
+            "/usr/local/lib/python3.10/dist-packages/torchvision/models/_utils.py:223: UserWarning: Arguments other than a weight enum or `None` for 'weights' are deprecated since 0.13 and may be removed in the future. The current behavior is equivalent to passing `weights=MobileNet_V2_Weights.IMAGENET1K_V1`. You can also use `weights=MobileNet_V2_Weights.DEFAULT` to get the most up-to-date weights.\n",
+            "  warnings.warn(msg)\n",
+            "Downloading: \"https://download.pytorch.org/models/mobilenet_v2-b0353104.pth\" to /root/.cache/torch/hub/checkpoints/mobilenet_v2-b0353104.pth\n",
+            "100%|██████████| 13.6M/13.6M [00:00<00:00, 72.3MB/s]\n"
+          ]
+        }
+      ],
+      "source": [
+        "import torchvision\n",
+        "model_quantized = torchvision.models.quantization.mobilenet_v2(pretrained=True, quantize=True)\n",
+        "model = torchvision.models.mobilenet_v2(pretrained=True)"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "**Compare model sizes**"
+      ],
+      "metadata": {
+        "id": "Uskpcr-HhMOg"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "import os\n",
+        "import torch\n",
+        "\n",
+        "def print_model_size(mdl):\n",
+        "    torch.save(mdl.state_dict(), \"tmp.pt\")\n",
+        "    print(\"%.2f MB\" %(os.path.getsize(\"tmp.pt\")/1e6))\n",
+        "    os.remove('tmp.pt')\n",
+        "\n",
+        "print_model_size(model)\n",
+        "print_model_size(model_quantized)"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "qlhE-3ML4D0b",
+        "outputId": "dfda875b-f9b4-49cc-c232-5f876a934805"
+      },
+      "execution_count": 2,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "14.24 MB\n",
+            "3.62 MB\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "**Load dataset using the same transforms used for training.**"
+      ],
+      "metadata": {
+        "id": "KsCXFLtDhVp5"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "import torchvision.datasets as datasets\n",
+        "import torchvision.transforms as transforms\n",
+        "from google.colab import drive\n",
+        "from torch.utils.data import Subset\n",
+        "drive.mount('/content/drive')\n",
+        "\n",
+        "data_path = \"/content/drive/My Drive/colab_files/imagenet/\"\n",
+        "imagenet_val = datasets.ImageNet(\n",
+        "\troot=data_path,\n",
+        "\tsplit='val',\n",
+        "    transform=transforms.Compose([\n",
+        "        transforms.Resize(256),\n",
+        "        transforms.CenterCrop(224),\n",
+        "        transforms.ToTensor(),\n",
+        "        transforms.Normalize(\n",
+        "            mean=[0.485, 0.456, 0.406],\n",
+        "            std=[0.229, 0.224, 0.225])\n",
+        "\t])\n",
+        ")"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "wHhsmFZB4VkT",
+        "outputId": "08df810f-01e5-476f-a1ca-c2118c257533"
+      },
+      "execution_count": 3,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Mounted at /content/drive\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "**Create a dataset subset and create a dataloader**"
+      ],
+      "metadata": {
+        "id": "m3NunU0ahfwa"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "from random import randint\n",
+        "#\n",
+        "# Create a subset of 300 images\n",
+        "#\n",
+        "maxSample = 300\n",
+        "\n",
+        "#\n",
+        "#Randomly generate 300 indexes based on the whole dataset.\n",
+        "#\n",
+        "indexes = [randint(1, len(imagenet_val)) for _ in range(maxSample)]\n",
+        "dataset_subset = Subset(imagenet_val,indexes)\n",
+        "\n",
+        "data_loader_subset = torch.utils.data.DataLoader(dataset_subset,\n",
+        "                                          batch_size=4,\n",
+        "                                          shuffle=True,\n",
+        "                                          num_workers=2)"
+      ],
+      "metadata": {
+        "id": "5boC88IAbuGt"
+      },
+      "execution_count": 4,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "**Evaluate function that will provde the assesment between a model and a dataset.**"
+      ],
+      "metadata": {
+        "id": "p21vjRSYh3RH"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "import time\n",
+        "import numpy as np\n",
+        "def evaluate(model, data_loader, loss_history):\n",
+        "    model.eval()\n",
+        "\n",
+        "    total_samples = len(data_loader.dataset)\n",
+        "    correct_samples = 0\n",
+        "    total_loss = 0\n",
+        "    times = []\n",
+        "    with torch.no_grad():\n",
+        "        for data, target in data_loader:\n",
+        "            start_time = time.time()\n",
+        "            output = torch.nn.functional.log_softmax(model(data), dim=1)\n",
+        "            end_time = time.time()\n",
+        "            #\n",
+        "            # Converts to milliseconds\n",
+        "            #\n",
+        "            times.append(1000*(end_time - start_time))\n",
+        "            loss = torch.nn.functional.nll_loss(output, target, reduction='sum')\n",
+        "            _, pred = torch.max(output, dim=1)\n",
+        "\n",
+        "            total_loss += loss.item()\n",
+        "            correct_samples += pred.eq(target).sum()\n",
+        "    avg_inference = np.mean(times)\n",
+        "    std_dev_inference = np.std(times)\n",
+        "    min_inference = np.min(times)\n",
+        "    max_inference = np.max(times)\n",
+        "\n",
+        "    avg_loss = total_loss / total_samples\n",
+        "    loss_history.append(avg_loss)\n",
+        "    print('\\tAverage test loss: ' + '{:.4f}'.format(avg_loss) +\n",
+        "          '\\tAccuracy:' + '{:5}'.format(correct_samples) + '/' +\n",
+        "          '{:5}'.format(total_samples) + ' (' +\n",
+        "          '{:4.2f}'.format(100.0 * correct_samples / total_samples) + '%)' +\n",
+        "          '\\tAverage inference time: ' + '{:.4f}ms'.format(avg_inference) +'\\n')\n"
+      ],
+      "metadata": {
+        "id": "LuxSMqJcc2RK"
+      },
+      "execution_count": 5,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "loss=[]\n",
+        "print(\"Quantized Model Metrics:\\n\")\n",
+        "evaluate(model_quantized,data_loader_subset,loss)\n",
+        "loss=[]\n",
+        "print(\"Non-Quantized Model Metrics:\\n\")\n",
+        "evaluate(model,data_loader_subset,loss)"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "b6jjw0TldW4B",
+        "outputId": "3f0b0111-5315-4e0c-983d-d7ccee2c9547"
+      },
+      "execution_count": 6,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Quantized Model Metrics:\n",
+            "\n",
+            "\tAverage test loss: 1.0949\tAccuracy:  223/  300 (74.33%)\tAverage inference time: 248.0277ms\n",
+            "\n",
+            "Non-Quantized Model Metrics:\n",
+            "\n",
+            "\tAverage test loss: 1.1311\tAccuracy:  221/  300 (73.67%)\tAverage inference time: 312.4161ms\n",
+            "\n"
+          ]
+        }
+      ]
+    }
+  ]
+}
